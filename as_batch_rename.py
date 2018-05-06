@@ -1,3 +1,21 @@
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
 # Alex Sknarin 2017
 # Simple Batch rename tool
 # TODO #1: Sort by name
@@ -30,6 +48,7 @@ from bpy.props import PointerProperty
 from bpy.types import Panel
 from bpy.types import PropertyGroup
 from bpy.types import Operator
+from bpy.types import AddonPreferences
 
 #-------------------------------------------------------------------------------------------------
 # Calculations
@@ -260,7 +279,7 @@ class as_batch_rename_panel(Panel):
     bl_label  = "as_Batch rename"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
-    bl_category = "as_CustomTools"
+    bl_category = "Tools"
     bl_context = "objectmode"
     
     #@classmethod
@@ -341,19 +360,69 @@ class as_batch_rename_panel(Panel):
         layout.operator("wm.do_as_rename")
             
     
+#-------------------------------------------------------------------------------------------------
+# AddonPreferences
+#-------------------------------------------------------------------------------------------------
 
+# Define Panel classes for updating
+as_panel = as_batch_rename_panel
+
+def update_as_batch_rename_panel(self, context):
+    message = "as_batch_rename: Updating Panel locations has failed"
+    try:
+        if "bl_rna" in as_panel.__dict__:
+            bpy.utils.unregister_class(as_panel)
+
+        as_panel.bl_category = context.user_preferences.addons[__name__].preferences.category
+        bpy.utils.register_class(as_panel)
+
+    except Exception as e:
+        print("\n[{}]\n{}\n\nError:\n{}".format(__name__, message, e))
+        pass
+
+class as_batch_renameAddonPreferences(AddonPreferences):
+    # this must match the addon name, use '__package__'
+    # when defining this in a submodule of a python package.
+    
+    bl_idname = __name__
+
+    category = StringProperty(
+            name="Category",
+            description="Choose a name for the category of the panel",
+            default="Tools",
+            update=update_as_batch_rename_panel,
+            )
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        col = row.column()
+        col.label(text="Category:")
+        col.prop(self, "category", text="")
+		
 
 # ------------------------------------------------------------------------
 # Register and Unregister
 # ------------------------------------------------------------------------
 
 def register():
-    bpy.utils.register_module(__name__)
+    #bpy.utils.register_module(__name__)
+    bpy.utils.register_class(as_batch_renameAddonPreferences)
+    bpy.utils.register_class(as_rename_property_group)
+    bpy.utils.register_class(as_rename_operator)
+    bpy.utils.register_class(as_batch_rename_panel)
+
     bpy.types.Scene.as_rename_prop_grp = PointerProperty(type=as_rename_property_group)
 
 def unregister():
-    bpy.utils.register_module(__name__)
+    #bpy.utils.register_module(__name__)
+    bpy.utils.unregister_class(as_batch_rename_panel)
+    bpy.utils.unregister_class(as_rename_operator)
+    bpy.utils.unregister_class(as_rename_property_group)
+    bpy.utils.unregister_class(as_batch_renameAddonPreferences)
     del bpy.types.Scene.as_rename_prop_grp
+    
+
 
 if __name__ == "__main__":
     register()
